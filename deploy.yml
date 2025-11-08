@@ -1,0 +1,54 @@
+name: Deploy to GitHub Pages
+
+# Se ejecuta cada vez que haces un push a la rama 'main'
+on:
+  push:
+    branches:
+      - main
+  # Permite ejecutarlo manualmente desde la pestaña Actions en GitHub
+  workflow_dispatch:
+
+# Permisos para que la Action pueda escribir en el repositorio para el despliegue
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      # 1. Obtiene el código de tu repositorio
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 2. Configura el entorno de Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm' # Cachea las dependencias para builds más rápidos
+
+      # 3. Instala las dependencias del proyecto
+      - name: Install dependencies
+        run: npm ci # 'ci' es más rápido y seguro para entornos de automatización
+
+      # 4. Compila la aplicación
+      #    VITE_BASE_URL es necesario para que las rutas funcionen en GitHub Pages
+      - name: Build application
+        run: npm run build -- --base=/${{ github.event.repository.name }}/
+
+      # 5. Configura GitHub Pages
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      # 6. Sube los archivos compilados (la carpeta 'dist') como un artefacto
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: './dist'
+
+      # 7. Despliega el artefacto en GitHub Pages
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
